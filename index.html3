@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  />
+  <title>DairyRumi — Mock Dashboard</title>
+
+  <!-- TailwindCSS CDN (ใช้เฉพาะ mock/demo ได้เลย) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN สำหรับกราฟ -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* ฟอนต์ระบบให้ดูสะอาดตา */
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI,
+      Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+
+    /* สวยขึ้นเล็กน้อย */
+    .card {
+      @apply rounded-3xl bg-white p-5 shadow-sm border;
+    }
+    .pill {
+      @apply text-xs px-2 py-1 rounded-full;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-amber-50 text-gray-900">
+
+  <!-- Top Bar -->
+  <header class="sticky top-0 z-20 bg-amber-50/80 backdrop-blur border-b">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="rounded-full bg-amber-400/60 w-9 h-9 grid place-items-center">🏠</div>
+        <div class="font-bold">DairyRumi</div>
+      </div>
+
+      <nav class="hidden md:flex gap-2">
+        <a href="#home" class="px-3 py-1.5 rounded-xl bg-black text-white">หน้าหลัก</a>
+        <a href="#tasks" class="px-3 py-1.5 rounded-xl hover:bg-black/5">ภารกิจ</a>
+        <a href="#history" class="px-3 py-1.5 rounded-xl hover:bg-black/5">ประวัติ</a>
+        <a href="#alerts" class="px-3 py-1.5 rounded-xl hover:bg-black/5">แจ้งเตือน</a>
+        <a href="#vet" class="px-3 py-1.5 rounded-xl hover:bg-black/5">โหมดสัตวแพทย์</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="flex-1">
+    <div class="max-w-6xl mx-auto p-4 grid gap-4">
+
+      <!-- 3 Cards Row -->
+      <div class="grid md:grid-cols-3 gap-4">
+        <!-- สุขภาพฝูงวันนี้ -->
+        <section class="card">
+          <div class="flex items-center gap-3">
+            <div class="rounded-2xl bg-amber-100 p-3 text-2xl leading-none">🐄</div>
+            <div>
+              <div class="text-sm text-gray-600">สุขภาพฝูงวันนี้</div>
+              <div class="text-2xl font-bold" id="avgRumi">เคี้ยวเอื้องเฉลี่ย 457 นาที</div>
+              <div class="text-sm text-gray-500">เทียบ baseline ส่วนบุคคล</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- แจ้งเตือนเร่งด่วน -->
+        <section class="card">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold">แจ้งเตือนเร่งด่วน</div>
+            <span>🔔</span>
+          </div>
+
+          <ul class="space-y-2 text-sm">
+            <li class="flex gap-2">
+              <span class="text-red-600">⚠️</span>
+              <span>#128 – เคี้ยวเอื้องต่ำกว่าปกติ 25% ต่อเนื่อง 4 ชม. · <span class="text-gray-500">4 ชม.ที่แล้ว</span></span>
+            </li>
+            <li class="flex gap-2">
+              <span class="text-yellow-600">⚠️</span>
+              <span>#173 – THI สูงในคอก 86 – เสี่ยงฮีทสเตรส · <span class="text-gray-500">1 ชม.ที่แล้ว</span></span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- สถานะอุปกรณ์ -->
+        <section class="card">
+          <div class="flex items-center gap-3 text-sm">
+            ⛅ ซิงก์ล่าสุด 10:40 · แบตต่ำ 2 เครื่อง
+          </div>
+        </section>
+      </div>
+
+      <!-- ภาพรวมทั้งฝูงวันนี้ + กราฟ -->
+      <div class="grid lg:grid-cols-3 gap-4">
+        <!-- รายชื่ิอโค -->
+        <section class="card lg:col-span-1">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold">ภาพรวมทั้งฝูง – วันนี้</div>
+            <span>📝</span>
+          </div>
+
+          <div class="grid gap-3" id="herdList">
+            <!-- จะเติมด้วย JS -->
+          </div>
+        </section>
+
+        <!-- กราฟเคี้ยวเอื้อง 7 วัน -->
+        <section class="card lg:col-span-1">
+          <div class="font-semibold mb-3">เคี้ยวเอื้องย้อนหลัง 7 วัน</div>
+          <div class="h-56">
+            <canvas id="rumiLine"></canvas>
+          </div>
+        </section>
+
+        <!-- กราฟน้ำนม -->
+        <section class="card lg:col-span-1">
+          <div class="font-semibold mb-3">น้ำนม (ลิตร/วัน)</div>
+          <div class="h-56">
+            <canvas id="milkBar"></canvas>
+          </div>
+        </section>
+      </div>
+
+      <!-- แจ้งเตือนล่าสุด -->
+      <section class="card">
+        <div class="font-semibold mb-3">แจ้งเตือนล่าสุด</div>
+        <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-3 text-sm">
+          <div class="flex items-start gap-3 p-4 border rounded-2xl bg-white">
+            <span class="text-red-600">⚠️</span>
+            <div class="flex-1">
+              <div class="font-medium">โค #128</div>
+              <div>เคี้ยวเอื้องต่ำกว่าปกติ 25% ต่อเนื่อง 4 ชม.</div>
+              <div class="text-xs text-gray-500 mt-1">4 ชม.ที่แล้ว</div>
+            </div>
+            <button class="text-sm rounded-xl px-3 py-1.5 bg-black text-white">เปิดเช็กลิสต์ตรวจ</button>
+          </div>
+
+          <div class="flex items-start gap-3 p-4 border rounded-2xl bg-white">
+            <span class="text-yellow-600">⚠️</span>
+            <div class="flex-1">
+              <div class="font-medium">โค #173</div>
+              <div>THI สูงในคอก 86 – เสี่ยงฮีทสเตรส</div>
+              <div class="text-xs text-gray-500 mt-1">1 ชม.ที่แล้ว</div>
+            </div>
+            <button class="text-sm rounded-xl px-3 py-1.5 bg-black text-white">เปิดเช็กลิสต์ตรวจ</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Bottom Tabs (mobile) -->
+  <footer class="md:hidden sticky bottom-0 bg-white border-t">
+    <div class="flex justify-around py-2 max-w-6xl mx-auto">
+      <button class="flex flex-col items-center text-xs text-gray-900"><span>●</span>หน้าหลัก</button>
+      <button class="flex flex-col items-center text-xs text-gray-500"><span>●</span>ภารกิจ</button>
+      <button class="flex flex-col items-center text-xs text-gray-500"><span>●</span>ประวัติ</button>
+      <button class="flex flex-col items-center text-xs text-gray-500"><span>●</span>แจ้งเตือน</button>
+    </div>
+  </footer>
+
+  <!-- Mock Data + Render -->
+  <script>
+    // ------ Mock Data ------
+    const herd = [
+      { id: 128, name: "ดาว", dim: 45, baseline: 520, rumiToday: 470 },
+      { id: 145, name: "ครีม", dim: 12, baseline: 500, rumiToday: 520 },
+      { id: 173, name: "โซดา", dim: 210, baseline: 480, rumiToday: 380 },
+    ];
+
+    const historyDays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    const historyRumi = [480, 505, 520, 495, 460, 530, 510];
+    const historyMilk = [18, 20, 22, 21, 19, 24, 23];
+
+    // ------ เติมข้อมูลสรุป ------
+    const avg = Math.round(herd.reduce((a,b)=>a + b.rumiToday, 0) / herd.length);
+    document.getElementById("avgRumi").textContent = `เคี้ยวเอื้องเฉลี่ย ${avg} นาที`;
+
+    // ------ แสดงรายการโค ------
+    const herdList = document.getElementById("herdList");
+    herd.forEach(c => {
+      const dev = Math.round(((c.rumiToday - c.baseline) / c.baseline) * 100);
+      let color = "bg-green-100 text-green-700";
+      if (dev < -15) color = "bg-red-100 text-red-700";
+      else if (dev < -5) color = "bg-yellow-100 text-yellow-700";
+
+      const item = document.createElement("div");
+      item.className = "flex items-center justify-between rounded-2xl border p-4 bg-white";
+      item.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="w-6 h-6 grid place-items-center text-lg">🏷️</div>
+          <div>
+            <div class="font-medium">#${c.id} ${c.name} · DIM ${c.dim}</div>
+            <div class="text-sm text-gray-500">วันนี้ ${c.rumiToday} นาที</div>
+          </div>
+        </div>
+        <span class="pill ${color}">${dev}%</span>
+      `;
+      herdList.appendChild(item);
+    });
+
+    // ------ Charts ------
+    // Line: Ruminations
+    const lineCtx = document.getElementById('rumiLine');
+    new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels: historyDays,
+        datasets: [{
+          label: 'Rumi (min)',
+          data: historyRumi,
+          borderWidth: 2,
+          tension: .35
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: false, grid: { color: '#eee' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Bar: Milk
+    const barCtx = document.getElementById('milkBar');
+    new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: historyDays,
+        datasets: [{
+          label: 'Milk (L/day)',
+          data: historyMilk,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#eee' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
