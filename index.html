@@ -12,10 +12,7 @@
     <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Babel สำหรับ JSX -->
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-
-    <!-- ฟังก์ชันโหลด Recharts แบบ fallback -->
+    <!-- helper: โหลด Recharts แบบ fallback 2 CDN -->
     <script>
       window.ensureRecharts = function () {
         return new Promise((resolve) => {
@@ -25,7 +22,7 @@
             var s = document.createElement("script");
             s.src = src;
             s.onload = cb;
-            s.onerror = cb; // ไปต่อที่ fallback แม้โหลดพลาด
+            s.onerror = cb;
             document.head.appendChild(s);
           }
 
@@ -33,33 +30,29 @@
           add("https://cdn.jsdelivr.net/npm/recharts/umd/Recharts.min.js", function () {
             if (window.Recharts) return resolve();
 
-            // Fallback → unpkg
+            // fallback → unpkg
             add("https://unpkg.com/recharts/umd/Recharts.min.js", function () {
-              resolve(); // resolve ต่อให้โหลดไม่ได้ เราจะเช็คอีกทีตอนใช้งาน
+              resolve();
             });
           });
         });
       };
     </script>
   </head>
-
   <body class="bg-amber-50 text-gray-900">
-    <noscript>
-      จำเป็นต้องเปิดการใช้งาน JavaScript เพื่อดูเดโมนี้
-    </noscript>
-
     <div id="root" class="max-w-5xl mx-auto p-4"></div>
 
-    <!-- โค้ด React (แปลงด้วย Babel) -->
-    <script type="text/babel" data-presets="react">
+    <script>
       (async function start() {
+        const e = React.createElement;
+
         // รอให้ Recharts โหลด
         await window.ensureRecharts();
 
-        // ถ้าโหลดไม่ได้ แสดงข้อความแจ้ง
+        const rootEl = document.getElementById("root");
+
         if (!window.Recharts) {
-          const el = document.getElementById("root");
-          el.innerHTML =
+          rootEl.innerHTML =
             '<div class="max-w-5xl mx-auto p-6 my-6 rounded-2xl bg-white border">' +
             '<h2 class="text-lg font-semibold mb-2">โหลด Recharts ไม่สำเร็จ</h2>' +
             '<p class="text-sm text-gray-600">ลองรีเฟรชหน้าใหม่ หรือเช็คอินเทอร์เน็ต/ไฟร์วอลล์</p>' +
@@ -67,17 +60,10 @@
           return;
         }
 
-        const { useState, useMemo } = React;
+        // ดึงคอมโพเนนต์จาก UMD
         const {
-          ResponsiveContainer,
-          LineChart,
-          Line,
-          XAxis,
-          YAxis,
-          CartesianGrid,
-          Tooltip,
-          BarChart,
-          Bar,
+          ResponsiveContainer, LineChart, Line, XAxis, YAxis,
+          CartesianGrid, Tooltip, BarChart, Bar
         } = window.Recharts;
 
         // --- ข้อมูลตัวอย่าง ---
@@ -93,172 +79,230 @@
           milk: [18, 20, 22, 21, 19, 24, 23][i],
         }));
 
-        function Card({ title, right, children }) {
-          return (
-            <div className="rounded-3xl bg-white p-5 shadow-sm border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-semibold">{title}</div>
-                {right}
-              </div>
-              {children}
-            </div>
+        // Utilities (ไม่ใช้ JSX)
+        function Card(props) {
+          return e(
+            "div",
+            { className: "rounded-3xl bg-white p-5 shadow-sm border" },
+            e(
+              "div",
+              { className: "flex items-center justify-between mb-3" },
+              e("div", { className: "font-semibold" }, props.title || ""),
+              props.right || null
+            ),
+            props.children
           );
         }
 
         function CowRow({ c }) {
           const dev = Math.round(((c.rumiToday - c.baseline) / c.baseline) * 100);
           const color =
-            dev < -15
-              ? "bg-red-100 text-red-700"
-              : dev < -5
-              ? "bg-yellow-100 text-yellow-700"
-              : "bg-green-100 text-green-700";
+            dev < -15 ? "bg-red-100 text-red-700" :
+            dev <  -5 ? "bg-yellow-100 text-yellow-700" :
+                        "bg-green-100 text-green-700";
 
-          return (
-            <div className="flex items-center justify-between rounded-2xl border p-4 bg-white">
-              <div>
-                <div className="font-medium">
-                  #{c.id} {c.name} · DIM {c.dim}
-                </div>
-                <div className="text-sm text-gray-500">วันนี้ {c.rumiToday} นาที</div>
-              </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${color}`}>{dev}%</span>
-            </div>
+          return e(
+            "div",
+            { className: "flex items-center justify-between rounded-2xl border p-4 bg-white" },
+            e(
+              "div",
+              null,
+              e("div", { className: "font-medium" }, `#${c.id} ${c.name} · DIM ${c.dim}`),
+              e("div", { className: "text-sm text-gray-500" }, `วันนี้ ${c.rumiToday} นาที`)
+            ),
+            e("span", { className: `text-xs px-2 py-1 rounded-full ${color}` }, `${dev}%`)
           );
         }
 
         function App() {
-          const [tab, setTab] = useState("home");
-          const avgRumi = useMemo(
-            () => Math.round(mockHerd.reduce((a, b) => a + b.rumiToday, 0) / mockHerd.length),
-            []
-          );
+          const [tab, setTab] = React.useState("home");
+          const avgRumi = React.useMemo(() => {
+            return Math.round(mockHerd.reduce((a, b) => a + b.rumiToday, 0) / mockHerd.length);
+          }, []);
 
-          return (
-            <div className="min-h-screen flex flex-col">
-              {/* Top Bar */}
-              <header className="sticky top-0 z-20 bg-amber-50/80 backdrop-blur border-b">
-                <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-4">
-                  <div className="rounded-full bg-amber-400/60 w-9 h-9 grid place-items-center">🏠</div>
-                  <div className="font-bold">DairyRumi</div>
-                  <nav className="ml-auto flex gap-2 text-sm">
-                    {["home", "history"].map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        className={`px-3 py-1.5 rounded-xl ${
-                          tab === t ? "bg-black text-white" : "hover:bg-black/5"
-                        }`}
-                      >
-                        {t === "home" ? "หน้าหลัก" : "ประวัติ"}
-                      </button>
-                    ))}
-                  </nav>
-                </div>
-              </header>
+          return e(
+            "div",
+            { className: "min-h-screen flex flex-col" },
 
-              {/* Content */}
-              <main className="flex-1">
-                <div className="max-w-5xl mx-auto p-4 grid gap-4">
-                  {tab === "home" && (
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <Card title="สุขภาพฝูงวันนี้">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-2xl bg-amber-100 p-3">🐄</div>
-                          <div>
-                            <div className="text-2xl font-bold">
-                              เคี้ยวเอื้องเฉลี่ย {avgRumi} นาที
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              เทียบ baseline ส่วนบุคคล
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
+            // Top bar
+            e(
+              "header",
+              { className: "sticky top-0 z-20 bg-amber-50/80 backdrop-blur border-b" },
+              e(
+                "div",
+                { className: "max-w-5xl mx-auto px-4 py-3 flex items-center gap-4" },
+                e("div", { className: "rounded-full bg-amber-400/60 w-9 h-9 grid place-items-center" }, "🏠"),
+                e("div", { className: "font-bold" }, "DairyRumi"),
+                e(
+                  "nav",
+                  { className: "ml-auto flex gap-2 text-sm" },
+                  ["home", "history"].map((t) =>
+                    e(
+                      "button",
+                      {
+                        key: t,
+                        onClick: () => setTab(t),
+                        className:
+                          "px-3 py-1.5 rounded-xl " +
+                          (tab === t ? "bg-black text-white" : "hover:bg-black/5"),
+                      },
+                      t === "home" ? "หน้าหลัก" : "ประวัติ"
+                    )
+                  )
+                )
+              )
+            ),
 
-                      <Card title="ภาพรวมทั้งฝูง – วันนี้">
-                        <div className="grid gap-3">
-                          {mockHerd.map((c) => (
-                            <CowRow key={c.id} c={c} />
-                          ))}
-                        </div>
-                      </Card>
+            // Content
+            e(
+              "main",
+              { className: "flex-1" },
+              e(
+                "div",
+                { className: "max-w-5xl mx-auto p-4 grid gap-4" },
 
-                      <Card title="สถานะอุปกรณ์">
-                        <div className="flex items-center gap-3 text-sm">
-                          ⛅ ซิงก์ล่าสุด 10:40 · แบตต่ำ 2 เครื่อง
-                        </div>
-                      </Card>
+                tab === "home" &&
+                  e(
+                    "div",
+                    { className: "grid md:grid-cols-3 gap-4" },
 
-                      <Card title="เคี้ยวเอื้องย้อนหลัง 7 วัน">
-                        <div className="h-48">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={mockHistory}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="day" />
-                              <YAxis />
-                              <Tooltip />
-                              <Line type="monotone" dataKey="rumi" strokeWidth={2} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </Card>
+                    e(
+                      Card,
+                      { title: "สุขภาพฝูงวันนี้" },
+                      e(
+                        "div",
+                        { className: "flex items-center gap-3" },
+                        e("div", { className: "rounded-2xl bg-amber-100 p-3" }, "🐄"),
+                        e(
+                          "div",
+                          null,
+                          e("div", { className: "text-2xl font-bold" }, `เคี้ยวเอื้องเฉลี่ย ${avgRumi} นาที`),
+                          e("div", { className: "text-sm text-gray-600" }, "เทียบ baseline ส่วนบุคคล")
+                        )
+                      )
+                    ),
 
-                      <Card title="น้ำนม (ลิตร/วัน)">
-                        <div className="h-48">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={mockHistory}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="day" />
-                              <YAxis />
-                              <Tooltip />
-                              <Bar dataKey="milk" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </Card>
-                    </div>
-                  )}
+                    e(
+                      Card,
+                      { title: "ภาพรวมทั้งฝูง – วันนี้" },
+                      e(
+                        "div",
+                        { className: "grid gap-3" },
+                        mockHerd.map((c) => e(CowRow, { key: c.id, c }))
+                      )
+                    ),
 
-                  {tab === "history" && (
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <Card title="เคี้ยวเอื้อง 7 วัน">
-                        <div className="h-56">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={mockHistory}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="day" />
-                              <YAxis />
-                              <Tooltip />
-                              <Line type="monotone" dataKey="rumi" strokeWidth={2} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </Card>
+                    e(
+                      Card,
+                      { title: "สถานะอุปกรณ์" },
+                      e(
+                        "div",
+                        { className: "flex items-center gap-3 text-sm" },
+                        "⛅ ซิงก์ล่าสุด 10:40 · แบตต่ำ 2 เครื่อง"
+                      )
+                    ),
 
-                      <Card title="น้ำนม 7 วัน">
-                        <div className="h-56">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={mockHistory}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="day" />
-                              <YAxis />
-                              <Tooltip />
-                              <Bar dataKey="milk" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </Card>
-                    </div>
-                  )}
-                </div>
-              </main>
-            </div>
+                    e(
+                      Card,
+                      { title: "เคี้ยวเอื้องย้อนหลัง 7 วัน" },
+                      e(
+                        "div",
+                        { className: "h-48" },
+                        e(
+                          ResponsiveContainer,
+                          { width: "100%", height: "100%" },
+                          e(
+                            LineChart,
+                            { data: mockHistory },
+                            e(CartesianGrid, { strokeDasharray: "3 3" }),
+                            e(XAxis, { dataKey: "day" }),
+                            e(YAxis, null),
+                            e(Tooltip, null),
+                            e(Line, { type: "monotone", dataKey: "rumi", strokeWidth: 2 })
+                          )
+                        )
+                      )
+                    ),
+
+                    e(
+                      Card,
+                      { title: "น้ำนม (ลิตร/วัน)" },
+                      e(
+                        "div",
+                        { className: "h-48" },
+                        e(
+                          ResponsiveContainer,
+                          { width: "100%", height: "100%" },
+                          e(
+                            BarChart,
+                            { data: mockHistory },
+                            e(CartesianGrid, { strokeDasharray: "3 3" }),
+                            e(XAxis, { dataKey: "day" }),
+                            e(YAxis, null),
+                            e(Tooltip, null),
+                            e(Bar, { dataKey: "milk" })
+                          )
+                        )
+                      )
+                    )
+                  ),
+
+                tab === "history" &&
+                  e(
+                    "div",
+                    { className: "grid md:grid-cols-2 gap-4" },
+
+                    e(
+                      Card,
+                      { title: "เคี้ยวเอื้อง 7 วัน" },
+                      e(
+                        "div",
+                        { className: "h-56" },
+                        e(
+                          ResponsiveContainer,
+                          { width: "100%", height: "100%" },
+                          e(
+                            LineChart,
+                            { data: mockHistory },
+                            e(CartesianGrid, { strokeDasharray: "3 3" }),
+                            e(XAxis, { dataKey: "day" }),
+                            e(YAxis, null),
+                            e(Tooltip, null),
+                            e(Line, { type: "monotone", dataKey: "rumi", strokeWidth: 2 })
+                          )
+                        )
+                      )
+                    ),
+
+                    e(
+                      Card,
+                      { title: "น้ำนม 7 วัน" },
+                      e(
+                        "div",
+                        { className: "h-56" },
+                        e(
+                          ResponsiveContainer,
+                          { width: "100%", height: "100%" },
+                          e(
+                            BarChart,
+                            { data: mockHistory },
+                            e(CartesianGrid, { strokeDasharray: "3 3" }),
+                            e(XAxis, { dataKey: "day" }),
+                            e(YAxis, null),
+                            e(Tooltip, null),
+                            e(Bar, { dataKey: "milk" })
+                          )
+                        )
+                      )
+                    )
+                  )
+              )
+            )
           );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById("root"));
-        root.render(<App />);
+        const root = ReactDOM.createRoot(rootEl);
+        root.render(e(App));
       })();
     </script>
   </body>
