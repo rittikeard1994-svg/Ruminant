@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DairyRumi Demo</title>
+
+    <!-- Tailwind (แค่เดโม) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React 18 (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Recharts (UMD) -->
+    <script src="https://cdn.jsdelivr.net/npm/recharts/umd/Recharts.min.js"></script>
+
+    <!-- Babel สำหรับ JSX แบบไม่ต้อง build -->
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="bg-amber-50 text-gray-900">
+    <div id="root" class="max-w-5xl mx-auto p-4"></div>
+
+    <script type="text/babel">
+      const {useState, useMemo} = React;
+      const {
+        ResponsiveContainer, LineChart, Line, XAxis, YAxis,
+        CartesianGrid, Tooltip, BarChart, Bar
+      } = window.Recharts;
+
+      // --- ข้อมูลตัวอย่าง ---
+      const mockHerd = [
+        { id: 128, name: "ดาว", dim: 45, baseline: 520, rumiToday: 470, milk: 27 },
+        { id: 145, name: "ครีม", dim: 12, baseline: 500, rumiToday: 520, milk: 33 },
+        { id: 173, name: "โซดา", dim: 210, baseline: 480, rumiToday: 380, milk: 18 },
+      ];
+
+      const mockHistory = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d, i) => ({
+        day: d,
+        rumi: [480, 505, 520, 495, 460, 530, 510][i],
+        milk: [18, 20, 22, 21, 19, 24, 23][i],
+      }));
+
+      function Card({ title, right, children }) {
+        return (
+          <div className="rounded-3xl bg-white p-5 shadow-sm border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-semibold">{title}</div>
+              {right}
+            </div>
+            {children}
+          </div>
+        );
+      }
+
+      function CowRow({ c }) {
+        const dev = Math.round(((c.rumiToday - c.baseline) / c.baseline) * 100);
+        const color = dev < -15 ? "bg-red-100 text-red-700" :
+                      dev <  -5 ? "bg-yellow-100 text-yellow-700" :
+                                  "bg-green-100 text-green-700";
+        return (
+          <div className="flex items-center justify-between rounded-2xl border p-4 bg-white">
+            <div>
+              <div className="font-medium">#{c.id} {c.name} · DIM {c.dim}</div>
+              <div className="text-sm text-gray-500">วันนี้ {c.rumiToday} นาที</div>
+            </div>
+            <span className={`text-xs px-2 py-1 rounded-full ${color}`}>{dev}%</span>
+          </div>
+        );
+      }
+
+      function App() {
+        const [tab, setTab] = useState("home");
+        const avgRumi = useMemo(
+          () => Math.round(mockHerd.reduce((a, b) => a + b.rumiToday, 0) / mockHerd.length),
+          []
+        );
+
+        return (
+          <div className="min-h-screen flex flex-col">
+            {/* Top Bar */}
+            <header className="sticky top-0 z-20 bg-amber-50/80 backdrop-blur border-b">
+              <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-4">
+                <div className="rounded-full bg-amber-400/60 w-9 h-9 grid place-items-center">🏠</div>
+                <div className="font-bold">DairyRumi</div>
+                <nav className="ml-auto flex gap-2 text-sm">
+                  {["home","history"].map(t => (
+                    <button key={t}
+                      onClick={() => setTab(t)}
+                      className={`px-3 py-1.5 rounded-xl ${tab===t?"bg-black text-white":"hover:bg-black/5"}`}>
+                      {t==="home"?"หน้าหลัก":"ประวัติ"}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </header>
+
+            {/* Content */}
+            <main className="flex-1">
+              <div className="max-w-5xl mx-auto p-4 grid gap-4">
+                {tab==="home" && (
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <Card title="สุขภาพฝูงวันนี้">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-2xl bg-amber-100 p-3">🐄</div>
+                        <div>
+                          <div className="text-2xl font-bold">เคี้ยวเอื้องเฉลี่ย {avgRumi} นาที</div>
+                          <div className="text-sm text-gray-600">เทียบ baseline ส่วนบุคคล</div>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card title="ภาพรวมทั้งฝูง – วันนี้">
+                      <div className="grid gap-3">
+                        {mockHerd.map(c => <CowRow key={c.id} c={c}/>)}
+                      </div>
+                    </Card>
+
+                    <Card title="สถานะอุปกรณ์">
+                      <div className="flex items-center gap-3 text-sm">
+                        ⛅ ซิงก์ล่าสุด 10:40 · แบตต่ำ 2 เครื่อง
+                      </div>
+                    </Card>
+
+                    <Card title="เคี้ยวเอื้องย้อนหลัง 7 วัน">
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={mockHistory}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="day" />
+                            <YAxis />
+                            <Tooltip />
+                            <Line type="monotone" dataKey="rumi" strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+
+                    <Card title="น้ำนม (ลิตร/วัน)">
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={mockHistory}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="day" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="milk" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </div>
+                )}
+
+                {tab==="history" && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Card title="เคี้ยวเอื้อง 7 วัน">
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={mockHistory}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="day" />
+                            <YAxis />
+                            <Tooltip />
+                            <Line type="monotone" dataKey="rumi" strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+
+                    <Card title="น้ำนม 7 วัน">
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={mockHistory}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="day" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="milk" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </div>
+                )}
+              </div>
+            </main>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
